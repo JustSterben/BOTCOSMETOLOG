@@ -20,14 +20,12 @@ WHATSAPP_LINK = os.getenv("WHATSAPP_LINK")
 if not all([BOT_TOKEN, OPENAI_API_KEY, WHATSAPP_LINK]):
     raise RuntimeError("❌ BOT_TOKEN / OPENAI_API_KEY / WHATSAPP_LINK не заданы.")
 
-# 🤖 OpenAI
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# 🪵 Логирование
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 👋 Команда /start
+# 👋 /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🧠 Задать вопрос боту", callback_data="bot_chat")],
@@ -45,7 +43,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Ошибка при /start: {e}")
 
-# 🔘 Обработка кнопок
+# 🔘 Кнопки
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -73,7 +71,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Ошибка обработки кнопки: {e}")
 
-# 💬 Обработка сообщений
+# 💬 Сообщения
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get("chat_mode"):
         return
@@ -81,7 +79,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_msg = update.message.text
 
-    # 🔁 Пользователь хочет вернуться к боту
+    # 🔁 Переключение назад в чат
     BACK_TO_CHAT_KEYWORDS = ["задать вопрос", "передумал", "вернуться", "спросить", "чат"]
     if any(word in user_msg.lower() for word in BACK_TO_CHAT_KEYWORDS):
         context.user_data["chat_mode"] = True
@@ -90,7 +88,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logger.info(f"[{user.id} | @{user.username}] ➜ {user_msg}")
 
-    # 🚨 Ключевые слова про консультацию
+    # 📍 Если пользователь пишет про проблему — сразу рекомендация
     CONSULTATION_KEYWORDS = ["консультац", "врач", "запис", "приём", "прием"]
     if any(word in user_msg.lower() for word in CONSULTATION_KEYWORDS):
         try:
@@ -102,7 +100,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text(reply, reply_markup=reply_markup)
         except Exception as e:
-            logger.error(f"Ошибка отправки ответа на консультацию: {e}")
+            logger.error(f"Ошибка отправки консультации: {e}")
         return
 
     # 💡 GPT-ответ
@@ -120,14 +118,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             temperature=0.7,
         )
         reply = response.choices[0].message.content.strip() if response.choices else "Ответ от GPT не получен."
+
+        # 📍 Автоматическая рекомендация консультации
+        REFERRAL_KEYWORDS = ["прыщ", "угри", "воспал", "покрасн", "сыпь", "раздраж", "зуд", "не помогает", "беспокоит", "шелуш", "болит"]
+        if any(word in user_msg.lower() for word in REFERRAL_KEYWORDS):
+            reply += "\n\n💬 Если ситуация вызывает беспокойство — рекомендую записаться на онлайн-консультацию к Доктору Оксане."
+
     except Exception as e:
-        logger.error(f"Ошибка OpenAI: {e}")
+        logger.error(f"Ошибка GPT: {e}")
         reply = "Упс, что-то пошло не так. Попробуйте позже."
 
     try:
         await update.message.reply_text(reply)
     except Exception as e:
-        logger.error(f"Ошибка отправки сообщения: {e}")
+        logger.error(f"Ошибка отправки ответа: {e}")
 
 # ✅ /done
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -136,7 +140,7 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Ошибка /done: {e}")
 
-# 🧠 Генерация статьи
+# 📚 Генерация статьи
 ARTICLE_TOPICS = [
     "ежедневный уход за кожей лица",
     "очищение и увлажнение",
@@ -153,13 +157,12 @@ async def generate_article():
     topic = random.choice(ARTICLE_TOPICS)
 
     prompt = (
-    f"Найди статью по теме «{topic}» (только по уходу за кожей). "
-    f"Сократи её до 3–5 абзацев. Изложи нейтральным, профессиональным языком без обращения к читателю. "
-    f"Измени формулировки, но не добавляй новых фактов. "
-    f"В конце обязательно добавь фразу: "
-    f"«Для наилучшего результата рекомендую записаться на онлайн-консультацию к Доктору Оксане.»"
-)
-
+        f"Найди статью по теме «{topic}» (только по уходу за кожей). "
+        f"Сократи её до 3–5 абзацев. Изложи нейтральным, профессиональным языком без обращения к читателю. "
+        f"Измени формулировки, но не добавляй новых фактов. "
+        f"В конце обязательно добавь фразу: "
+        f"«Для наилучшего результата рекомендую записаться на онлайн-консультацию к Доктору Оксане.»"
+    )
 
     try:
         response = client.chat.completions.create(
