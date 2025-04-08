@@ -11,22 +11,23 @@ from telegram.ext import (
 )
 from openai import OpenAI
 
-# Получение переменных окружения из Railway
+# 🔐 Получение переменных окружения
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 WHATSAPP_LINK = os.getenv("WHATSAPP_LINK")
 
-# Проверка переменных (на всякий случай)
-if not BOT_TOKEN or not OPENAI_API_KEY or not WHATSAPP_LINK:
-    raise EnvironmentError("Одна или несколько переменных окружения не установлены.")
+# ✅ Проверка, заданы ли переменные
+if not all([BOT_TOKEN, OPENAI_API_KEY, WHATSAPP_LINK]):
+    raise RuntimeError("❌ BOT_TOKEN / OPENAI_API_KEY / WHATSAPP_LINK не заданы в переменных окружения.")
 
+# 🤖 Инициализация OpenAI
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# Логирование
+# 📋 Логирование
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Команда /start
+# 👋 Команда /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🧠 Задать вопрос боту", callback_data="bot_chat")],
@@ -38,32 +39,42 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Помогаю с уходом за кожей и подсказываю, как улучшить её состояние.\n\n"
         "📌 Консультация ознакомительная и не является лечением."
     )
-    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
+    try:
+        await update.message.reply_text(welcome_text, reply_markup=reply_markup)
+    except Exception as e:
+        logger.error(f"❌ Ошибка отправки приветствия: {e}")
 
-# Обработка кнопок
+# 🔘 Обработка кнопок
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.data == "bot_chat":
-        await query.edit_message_text("Напишите ваш вопрос по уходу за кожей. Я постараюсь помочь 🧴")
-        context.user_data["chat_mode"] = True
-    elif query.data == "whatsapp":
-        keyboard = [[InlineKeyboardButton("Перейти в WhatsApp", url=WHATSAPP_LINK)]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(
-            "👩‍⚕️ Наш врач готов проконсультировать вас лично!\n"
-            "Нажмите кнопку ниже и напишите в WhatsApp:",
-            reply_markup=reply_markup
-        )
-        context.user_data["chat_mode"] = False
+    try:
+        if query.data == "bot_chat":
+            await query.edit_message_text("Напишите ваш вопрос по уходу за кожей. Я постараюсь помочь 🧴")
+            context.user_data["chat_mode"] = True
 
-# Ответ на сообщение
+        elif query.data == "whatsapp":
+            keyboard = [[InlineKeyboardButton("Перейти в WhatsApp", url=WHATSAPP_LINK)]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(
+                "👩‍⚕️ Наш врач готов проконсультировать вас лично!\n"
+                "Нажмите кнопку ниже и напишите в WhatsApp:",
+                reply_markup=reply_markup
+            )
+            context.user_data["chat_mode"] = False
+    except Exception as e:
+        logger.error(f"❌ Ошибка обработки кнопки: {e}")
+
+# 🧴 Обработка сообщений
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get("chat_mode"):
         return
 
+    user = update.effective_user
     user_msg = update.message.text
+    logger.info(f"[{user.id} | @{user.username}] ➜ {user_msg}")
+
     prompt = (
         "Ты — профессиональный косметолог. Отвечай только на вопросы по уходу за кожей. "
         "Если вопрос не по теме — скажи, что ты можешь говорить только о косметологии.\n"
@@ -77,18 +88,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             max_tokens=300,
             temperature=0.7,
         )
-        reply = response.choices[0].message.content.strip()
+        reply = response.choices[0].message.content.strip() if response.choices else "Ответ от GPT не получен."
     except Exception as e:
-        logger.error(f"Ошибка GPT: {e}")
+        logger.error(f"❌ Ошибка GPT: {e}")
         reply = "Упс, что-то пошло не так. Попробуйте позже."
 
-    await update.message.reply_text(reply)
+    try:
+        await update.message.reply_text(reply)
+    except Exception as e:
+        logger.error(f"❌ Ошибка отправки ответа: {e}")
 
-# Команда /done
+# ✅ Команда /done
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Спасибо, что обратились! Будьте красивы и здоровы 💖")
+    try:
+        await update.message.reply_text("Спасибо, что обратились! Будьте красивы и здоровы 💖")
+    except Exception as e:
+        logger.error(f"❌ Ошибка /done: {e}")
 
-# Запуск бота
+# 🚀 Запуск бота
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
