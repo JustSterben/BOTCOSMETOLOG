@@ -1,7 +1,5 @@
 import logging
 import os
-import asyncio
-from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -13,13 +11,15 @@ from telegram.ext import (
 )
 from openai import OpenAI
 
-# Загрузка переменных окружения
-load_dotenv()
+# Получение переменных окружения из Railway
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 WHATSAPP_LINK = os.getenv("WHATSAPP_LINK")
 
-# Инициализация OpenAI
+# Проверка переменных (на всякий случай)
+if not BOT_TOKEN or not OPENAI_API_KEY or not WHATSAPP_LINK:
+    raise EnvironmentError("Одна или несколько переменных окружения не установлены.")
+
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Логирование
@@ -38,12 +38,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Помогаю с уходом за кожей и подсказываю, как улучшить её состояние.\n\n"
         "📌 Консультация ознакомительная и не является лечением."
     )
-    # Если update.message отсутствует (например, при вызове webhook),
-    # можно проверить update.effective_message
-    if update.message:
-        await update.message.reply_text(welcome_text, reply_markup=reply_markup)
-    elif update.callback_query:
-        await update.callback_query.answer(text=welcome_text)
+    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
 # Обработка кнопок
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -63,7 +58,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         context.user_data["chat_mode"] = False
 
-# Обработка сообщений
+# Ответ на сообщение
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get("chat_mode"):
         return
@@ -93,7 +88,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Спасибо, что обратились! Будьте красивы и здоровы 💖")
 
-# Запуск с вебхуком
+# Запуск бота
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -102,12 +97,7 @@ def main():
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=8080,
-        webhook_url="https://bbac51afk9redqr4egbf.containers.yandexcloud.net/"
-    )
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
-
