@@ -70,12 +70,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user = update.effective_user
     user_msg = update.message.text
-    # 🔁 Проверка: пользователь хочет вернуться к боту
-BACK_TO_CHAT_KEYWORDS = ["задать вопрос", "передумал", "вернуться", "спросить", "чат"]
-if any(kw in user_msg.lower() for world in BACK_TO_CHAT_KEYWORDS):
-    context.user_data["chat_mode"] = True
-    await update.message.reply_text("Хорошо! Напишите свой вопрос, я с радостью помогу 🧴")
-    return
+
+    # ✅ Вот тут и должно быть
+    BACK_TO_CHAT_KEYWORDS = ["задать вопрос", "передумал", "вернуться", "спросить", "чат"]
+    if any(word in user_msg.lower() for word in BACK_TO_CHAT_KEYWORDS):
+        context.user_data["chat_mode"] = True
+        await update.message.reply_text("Хорошо! Напишите свой вопрос, я с радостью помогу 🧴")
+        return
+
     logger.info(f"[{user.id} | @{user.username}] ➜ {user_msg}")
 
     # 🚨 Ключевые слова про консультацию
