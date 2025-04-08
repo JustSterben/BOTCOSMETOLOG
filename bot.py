@@ -72,10 +72,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user = update.effective_user
-    user_msg = update.message.text
-    # Внутри handle_message
-CONSULTATION_KEYWORDS = ["консультац", "врач", "запис", "приём", "прием"]
+user_msg = update.message.text
 
+# 👉 Ключевые слова для консультации
+CONSULTATION_KEYWORDS = ["консультац", "врач", "запис", "приём", "прием"]
 if any(word in user_msg.lower() for word in CONSULTATION_KEYWORDS):
     reply = (
         "Чтобы записаться на консультацию, нажмите кнопку 👇 и напишите нам в WhatsApp.\n\n"
@@ -84,15 +84,19 @@ if any(word in user_msg.lower() for word in CONSULTATION_KEYWORDS):
     keyboard = [[InlineKeyboardButton("Перейти в WhatsApp", url=WHATSAPP_LINK)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(reply, reply_markup=reply_markup)
-    return
+    return  # 🔥 Важно: остановить обработку, не отправлять в GPT
 
-    logger.info(f"[{user.id} | @{user.username}] ➜ {user_msg}")
+# Логируем
+logger.info(f"[{user.id} | @{user.username}] ➜ {user_msg}")
 
-    prompt = (
-        "Ты — профессиональный косметолог. Отвечай только на вопросы по уходу за кожей. "
-        "Если вопрос не по теме — скажи, что ты можешь говорить только о косметологии.\n"
-        f"Вопрос: {user_msg}"
-    )
+# Запрос к GPT
+prompt = (
+    "Ты — профессиональный косметолог. Отвечай только на вопросы по уходу за кожей. "
+    "Если вопрос не по теме — скажи, что ты можешь говорить только о косметологии.\n"
+    f"Вопрос: {user_msg}"
+)
+...
+
 
     try:
         response = client.chat.completions.create(
