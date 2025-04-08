@@ -68,6 +68,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("📚 Ищу интересную статью по уходу за кожей...")
             article = await generate_article()
             await query.message.reply_text(article)
+            context.user_data["chat_mode"] = True
 
     except Exception as e:
         logger.error(f"Ошибка обработки кнопки: {e}")
