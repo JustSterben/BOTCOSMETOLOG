@@ -72,7 +72,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_msg = update.message.text
     # 🔁 Проверка: пользователь хочет вернуться к боту
 BACK_TO_CHAT_KEYWORDS = ["задать вопрос", "передумал", "вернуться", "спросить", "чат"]
-if any(kw in user_msg.lower() for kw in BACK_TO_CHAT_KEYWORDS):
+if any(kw in user_msg.lower() for world in BACK_TO_CHAT_KEYWORDS):
     context.user_data["chat_mode"] = True
     await update.message.reply_text("Хорошо! Напишите свой вопрос, я с радостью помогу 🧴")
     return
