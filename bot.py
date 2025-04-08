@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -31,6 +32,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🧠 Задать вопрос боту", callback_data="bot_chat")],
         [InlineKeyboardButton("👩‍⚕️ Хочу консультацию с врачом", callback_data="whatsapp")],
+        [InlineKeyboardButton("📚 Статьи о коже", callback_data="articles")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     welcome_text = (
@@ -51,6 +53,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if query.data == "bot_chat":
             await query.edit_message_text("Напишите ваш вопрос по уходу за кожей. Я постараюсь помочь 🧴")
             context.user_data["chat_mode"] = True
+
         elif query.data == "whatsapp":
             keyboard = [[InlineKeyboardButton("Перейти в WhatsApp", url=WHATSAPP_LINK)]]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -60,6 +63,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=reply_markup
             )
             context.user_data["chat_mode"] = False
+
+        elif query.data == "articles":
+            await query.edit_message_text("📚 Ищу интересную статью по уходу за кожей...")
+            article = await generate_article()
+            await query.message.reply_text(article)
+
     except Exception as e:
         logger.error(f"Ошибка обработки кнопки: {e}")
 
@@ -71,7 +80,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_msg = update.message.text
 
-    # 🔁 Пользователь хочет вернуться к чату
+    # 🔁 Пользователь хочет вернуться к боту
     BACK_TO_CHAT_KEYWORDS = ["задать вопрос", "передумал", "вернуться", "спросить", "чат"]
     if any(word in user_msg.lower() for word in BACK_TO_CHAT_KEYWORDS):
         context.user_data["chat_mode"] = True
@@ -125,6 +134,41 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Спасибо, что обратились! Будьте красивы и здоровы 💖")
     except Exception as e:
         logger.error(f"Ошибка /done: {e}")
+
+# 🧠 Генерация статьи
+ARTICLE_TOPICS = [
+    "ежедневный уход за кожей лица",
+    "очищение и увлажнение",
+    "уход за жирной кожей",
+    "уход за сухой и чувствительной кожей",
+    "антивозрастной уход",
+    "сыворотки и активные компоненты",
+    "эксфолиация и маски",
+    "профилактика акне",
+    "как выбрать крем по типу кожи"
+]
+
+async def generate_article():
+    topic = random.choice(ARTICLE_TOPICS)
+
+    prompt = (
+        f"Найди статью по теме «{topic}» (только по уходу за кожей). "
+        f"Сократи её до 3–5 абзацев. Сделай стиль лёгким, дружелюбным, в духе бьюти-блога. "
+        f"Измени текст, но сохрани суть. В конце добавь фразу: "
+        f"«💬 Для наилучшего результата рекомендую записаться на онлайн-консультацию к Доктору Оксане.»"
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-1106-preview",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=900,
+            temperature=0.85,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        logger.error(f"Ошибка генерации статьи: {e}")
+        return "Не удалось получить статью 😔 Попробуйте позже."
 
 # 🚀 Старт
 def main():
