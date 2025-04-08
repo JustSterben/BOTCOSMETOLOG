@@ -73,6 +73,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user = update.effective_user
     user_msg = update.message.text
+    # Внутри handle_message
+CONSULTATION_KEYWORDS = ["консультац", "врач", "запис", "приём", "прием"]
+
+if any(word in user_msg.lower() for word in CONSULTATION_KEYWORDS):
+    reply = (
+        "Чтобы записаться на консультацию, нажмите кнопку 👇 и напишите нам в WhatsApp.\n\n"
+        "👩‍⚕️ Мы с радостью вам поможем лично!"
+    )
+    keyboard = [[InlineKeyboardButton("Перейти в WhatsApp", url=WHATSAPP_LINK)]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(reply, reply_markup=reply_markup)
+    return
+
     logger.info(f"[{user.id} | @{user.username}] ➜ {user_msg}")
 
     prompt = (
