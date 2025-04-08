@@ -11,7 +11,7 @@ from telegram.ext import (
 )
 from openai import OpenAI
 
-# 🔐 Переменные окружения с Railway
+# 🔐 Переменные окружения
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 WHATSAPP_LINK = os.getenv("WHATSAPP_LINK")
@@ -71,7 +71,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_msg = update.message.text
 
-    # ✅ Вот тут и должно быть
+    # 🔁 Пользователь хочет вернуться к чату
     BACK_TO_CHAT_KEYWORDS = ["задать вопрос", "передумал", "вернуться", "спросить", "чат"]
     if any(word in user_msg.lower() for word in BACK_TO_CHAT_KEYWORDS):
         context.user_data["chat_mode"] = True
@@ -95,7 +95,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"Ошибка отправки ответа на консультацию: {e}")
         return
 
-    # 🤖 Генерация ответа через GPT
+    # 💡 GPT-ответ
     prompt = (
         "Ты — профессиональный косметолог. Отвечай только на вопросы по уходу за кожей. "
         "Если вопрос не по теме — скажи, что ты можешь говорить только о косметологии.\n"
